@@ -1,0 +1,135 @@
+window.block_header = [];
+window.hash_clock = 0;
+window.rate_clock = 0;
+window.block_data = [];
+window.nonce = 0;
+window.bigIntSmHash = str2bigInt("ffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff","16",0);
+window.lasttime = 0;
+window.lastnonce = 0;
+
+jQuery(document).ready(function() {
+    $("#block_hash").val("");
+
+    jQuery("#doit").click(function() {
+        start_hashing();
+    });
+
+    jQuery("#testbtn").click(function () {
+        settext();
+        $("#block_data").html(window.block_header);
+    });
+
+    jQuery("#getblockdata").click(function () {
+        //$("#block_data").html("Loading block data...");
+        get_block_data();
+    });
+});
+
+function set_block_data() {
+    $("#block_data").html(JSON.stringify(block_data, null, 4));
+
+    jQuery("#version").val(block_data["ver"]);
+    jQuery("#prev_hash").val(block_data["prev_block"]);
+    jQuery("#merkle_root").val(block_data["mrkl_root"]);
+    $("#human_time").html(String(new Date(block_data["time"]*1000)));
+    jQuery("#timestamp").val(switch_endian(block_data["time"].toString(16)));
+    jQuery("#target").val(block_data["bits"]);
+    jQuery("#nonce").val(0);
+}
+
+function get_block_data() {
+    jQuery.ajax({
+        url: '/request',
+        type: "POST",
+        data: {request : "getblock", address : $("#recv_addr").val()},
+        success: function(data) {
+            if (data == "error: couldn't connect to server") {
+                alert(data);
+                return false;
+            }
+            block_data = data;
+            set_block_data()
+        },
+        });
+    return false;
+}
+
+function switch_endian(hex) {
+    if (hex.length % 2 != 0) {
+        return -1
+    }
+
+    var result = ""
+    var start = (hex.length-2)
+    while (start >= 0) {
+        result += hex.substring(start, start+2)
+        start -= 2
+    }
+    return result;
+}
+
+function u32_lehex(number) {
+    pad = "00000000";
+    hex = parseInt(number).toString(16)
+    padded = pad.slice(hex.length, pad.length) + hex;
+
+    return switch_endian(padded);
+}
+
+function load_values() {
+    header_data = CryptoJS.enc.Hex.parse(
+        u32_lehex($("#version").val()) + switch_endian($("#prev_hash").val()) + 
+        switch_endian($("#merkle_root").val()) + $("#timestamp").val() + 
+        $("#target").val() + u32_lehex($("#nonce").val()));
+
+    window.block_header = CryptoJS.enc.Hex.stringify(header_data);
+}
+
+function dsha256(data) {
+    return CryptoJS.SHA256(CryptoJS.SHA256(data));
+}
+  
+
+function settext() {
+    load_values();
+
+    console.log(block_header);
+
+    var hash_field = document.getElementById("block_hash");
+
+    var hash = dsha256(CryptoJS.enc.Hex.parse(window.block_header));
+
+    var littleEndian = switch_endian(hash.toString(CryptoJS.enc.Hex));
+
+    hash_field.value = littleEndian;
+
+    var bigIntHash = str2bigInt(littleEndian,"16",0);
+
+    if ( !equals(bigIntHash, bigIntSmHash) && !greater(bigIntHash, bigIntSmHash) ) {
+        bigIntSmHash = bigIntHash;
+        jQuery("#sm_hash").val(littleEndian);
+    }
+}
+
+function hash_iter() {
+    window.nonce++;
+    jQuery("#nonce").val(window.nonce);
+    settext();
+}
+
+function start_hashing() {
+    settext();
+    jQuery("#sm_hash").val(jQuery("#hash_field").val());
+    window.lasttime = new Date().getTime();
+    window.lastnonce = window.nonce;
+    rate_clock = setInterval(rate_measure, 1000);
+    hash_clock = setInterval(hash_iter,1);
+}
+
+function rate_measure() {
+    thistime = new Date().getTime();
+    speed = Math.round((window.nonce-window.lastnonce)/(thistime-window.lasttime)*1000);
+    window.lasttime = thistime;
+    window.lastnonce = window.nonce
+    jQuery("#hash_rate").html(speed + " hashes/sec");
+}

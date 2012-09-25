@@ -1,0 +1,39 @@
+<html>
+    <head>
+        <title>findablock.com - mine in your browser. while looking at it.</title>
+        <meta http-equiv="Content-Type" content="text/html; charset=ISO-8859-1" />
+        <link rel="stylesheet" type="text/css" href="/static/tutorial.css" />
+        
+        <script type="text/javascript" src="/static/jquery.js"></script>
+        <script type="text/javascript" src="http://crypto-js.googlecode.com/svn/tags/3.0.2/build/rollups/sha256.js"></script>
+        <script type="text/javascript" src="/static/BigInt.js"></script>
+        <script type="text/javascript" src="/static/memorypool.js"></script>
+        
+        <script type="text/javascript" src="/static/blockstuff.js">
+    </head>
+    
+    <body>
+
+        <div align="right"><button class="button" id="testbtn">The infamous test button</button></div>
+
+<br>
+        <div align="center">
+        <button class="button" id="getblockdata">Get block data</button><br><br>
+        <button class="button" id="doit">Start hashing!</button>
+        <button class="button" onclick="hash_clock=window.clearInterval(hash_clock);rate_clock=window.clearInterval(rate_clock)">Stop hashing!</button><br>
+        <font size="12">Block header</font>
+        </div>
+         Block hash: <input id="block_hash" type="text" size="64" value=""><br>
+         Version: <input id="version" type="text" size="8" value="01000000"><br>
+         Previous block hash: <input id="prev_hash" type="text" size="64" value="81cd02ab7e569e8bcd9317e2fe99f2de44d49ab2b8851ba4a308000000000000"><br>
+         Transaction list Merkle root: <input id="merkle_root" type="text" size="64" value="e320b6c2fffc8d750423db8b1eb942ae710e951ed797f7affc8892b0f1fc122b"><br>
+         Timestamp: <input id="timestamp" type="text" size="8" value="c7f5d74d"> <span id="human_time">Now?</span><br>
+         Current target in compact format: <input id="target" type="text" size="8" value="f2b9441a"><br>
+         Nonce: <input id="nonce" type="text" size="8" value="42a14695"><br><br>
+         Hashing speed: <span id="hash_rate">0 hashes/sec</span><br>
+         Receive address: <input id="recv_addr" type="text" size="34" value="1L4fyJqCy5uLmoMo4cG74TaTvgtUwwSHJx"><br>
+         Smallest hash found: <input id="sm_hash" type="text" size="64" value=""><br><br><br>
+        <span id="block_data">01000000124ea187e74a112408ae0209ed48235f33a563388b5db239d20300000000000085f1accb1b771a7cd240f06ed8108f09d00b32b13e9de027fe3f72700f739ec111835550383a061a7d3a373a</span>
+    </body>
+    
+</html>

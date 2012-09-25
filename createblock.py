@@ -1,6 +1,12 @@
-from deserialize import *
-from BCDataStream import *
-from base58 import *
+import sys
+
+sys.path.insert(0, '/home/rune/Programming/bitcointools')
+
+#from deserialize import *
+from deserialize import opcodes
+from BCDataStream import BCDataStream
+#from base58 import *
+from base58 import bc_address_to_hash_160
 import json
 import subprocess
 import struct
@@ -8,9 +14,9 @@ import Crypto.Hash.SHA256 as sha256
 import binascii
 import math
 
-coinbase = "Created with this runeks' awesome Python script"
+coinbase = "Created with runeks' awesome Python script."
 test_generation_address = "1L4fyJqCy5uLmoMo4cG74TaTvgtUwwSHJx"
-getmemorypool_command = "bitcoind getmemorypool"
+getmemorypool_command = "bitcoind getblocktemplate"
 
 def get_merkle_parents(data):
    hashes = []
@@ -32,14 +38,6 @@ def get_merkle_parents(data):
 def get_merkle_tree(txs_data):
    hashes = [dsha256(tx) for tx in txs_data]
    return hashes + get_merkle_parents(hashes)
-   #hashes = []
-   #first add hashes of all the transactions to the list
-   #for tx in txs_data:
-   #   hashes.append(dsha256(tx))
-   #then add the remaining hashes to the list
-   #for shash in get_merkle_list(hashes):
-   #   hashes.append(shash)
-   #return hashes
 
 def get_merkle_root(txs_data):
    return get_merkle_tree(txs_data)[-1]
@@ -124,32 +122,86 @@ def write_block(vds, txs_data):
       vds.write(tx)
    return vds
 
-def main():
+def get_block(address):
+   #returns dict containing data for a block where the generation address is set to <address>
+
    #first we get the data from the getmemorypool command
    res = subprocess.Popen(getmemorypool_command.split(), stderr=subprocess.STDOUT, stdout=subprocess.PIPE).communicate()
    
    if res[0] == "error: couldn't connect to server\n":
       print "Error:\tCouldn't connect to a running bitcoin instance.\n\tEither bitcoin isn't running, or you haven't configured it\n\tto accept connections via RPC in bitcoin.conf"
+      return "error: couldn't connect to server"
+   try:
+      obj = json.loads(res[0])
+   except ValueError:
+      print "Error: couldn't decode response from bitcoind.\n\tResponse: '%s'" % res[0].rstrip('\n')
       return -1
+      
+
+   #insert the generation transaction as the first item of the 'transactions' list
+   obj['transactions'].insert(0,
+                                 {
+                                    "data" : create_generation_tx(address, obj['coinbasevalue']).encode('hex'),
+                                 }
+                              )
+
+   #now we return a JSON string that contains all the necessary field that need to be published to the network
+   return {
+     "ver":obj['version'],
+     "prev_block":str(obj['previousblockhash']),
+     "mrkl_root":reverse_byte_order(get_merkle_root([tx_hex['data'].decode('hex') for tx_hex in obj['transactions']])).encode('hex'),
+     "time":obj['curtime'],
+     "bits":str(obj['bits']),
+     "nonce":0,
+     "n_tx":len(obj['transactions']),
+     "tx":obj['transactions']
+   }
+
+def blockheader_test():
+   vds = BCDataStream();
+
+   #d['version'] = vds.read_int32()   
+   vds.write_int32(1)
+   #d['hashPrev'] = vds.read_bytes(32)
+   hashPrev = "00000000000003d239b25d8b3863a5335f2348ed0902ae0824114ae787a14e12"
+   vds.write(reverse_byte_order(hashPrev.decode('hex')))
+   #vds.write(hashPrev.decode('hex'))
+   #d['hashMerkleRoot'] = vds.read_bytes(32)
+   #vds.write(get_merkle_root(txs_data))
+   vds.write(reverse_byte_order("c19e730f70723ffe27e09d3eb1320bd0098f10d86ef040d27c1a771bcbacf185".decode('hex')))
+   #d['nTime'] = vds.read_uint32()
+   vds.write_uint32(1347781393)
+   #d['nBits'] = vds.read_uint32()
+   vds.write_uint32(436615736)
+   #d['nNonce'] = vds.read_uint32()
+   vds.write_uint32(976697981)
+
+   print vds.input[0:80].encode('hex')
+   print dsha256(vds.input[0:80])[::-1].encode('hex_codec')
+
+def block_send_test():
+   #first we get the data from the getmemorypool command
+   res = subprocess.Popen(getmemorypool_command.split(), stderr=subprocess.STDOUT, stdout=subprocess.PIPE).communicate()
+   
+   if res[0] == "error: couldn't connect to server\n":
+      print "Error:\tCouldn't connect to a running bitcoin instance.\n\tEither bitcoin isn't running, or you haven't configured it\n\tto accept connections via RPC in bitcoin.conf"
+      return "error: couldn't connect to server"
    obj = json.loads(res[0])
 
    #insert the generation transaction as the first item of the 'transactions' list
-   obj['transactions'].insert(0,create_generation_tx(test_generation_address, obj['coinbasevalue']).encode('hex'))
+   obj['transactions'].insert(0,create_generation_tx(address, obj['coinbasevalue']).encode('hex'))
 
-   txs_data = []
-   for tx in obj['transactions']:
-      txs_data.append(tx.decode('hex'))
-
-   test = BCDataStream()
-   test = write_block(test, txs_data)
-
-   d = parse_Block(test)
-   block_string = deserialize_Block(d)
-   
-   print "Block height: <dunno>"
-   print "BLOCK "+dsha256(test.input[0:80])[::-1].encode('hex_codec')
-   print "Next block: <dunno either>"
-   print block_string
+   #now we return a dictionaty that contains all the necessary fields that need to be published to the network
+   return {
+     "ver":obj['version'],
+     "prev_block":str(obj['previousblockhash']),
+     "mrkl_root":reverse_byte_order(get_merkle_root([tx_hex.decode('hex') for tx_hex in obj['transactions']])).encode('hex'),
+     "time":obj['time'],
+     "bits":str(obj['bits']),
+     "nonce":0,
+     "n_tx":len(obj['transactions']),
+     "tx":obj['transactions']
+   }
 
 def test():
    #these are the transactions, in hex, from block 000000000000034de9c9a67fe15517e8ab93df99f406ab239478714fb825b969
@@ -176,6 +228,33 @@ def test():
    print "BLOCK "+dsha256(test.input[0:80])[::-1].encode('hex_codec')
    print "Next block: <dunno either>"
    print block_string
+   
+def get_fakeblock(address):
 
-if __name__ == '__main__':
-    test()
+   res = subprocess.Popen(
+                          ("/home/rune/Programming/scripts/bitcoin/findablock/bitcointools/dbdump.py",
+                           "--block=190000", "--print-json"),
+                           stderr=subprocess.STDOUT, stdout=subprocess.PIPE).communicate()
+   
+   obj = json.loads(res[0])
+
+   #insert the generation transaction as the first item of the 'transactions' list
+   #obj['transactions'].insert(0,create_generation_tx(address, obj['coinbasevalue']).encode('hex'))
+
+   #now we return a JSON string that contains all the necessary field that need to be published to the network
+   return {
+     "ver":obj['version'],
+     "prev_block":str(obj['previousblockhash']),
+     "mrkl_root":reverse_byte_order(get_merkle_root([tx_hex.decode('hex') for tx_hex in obj['transactions']])).encode('hex'),
+     "time":obj['time'],
+     "bits":str(obj['bits']),
+     "nonce":obj['nonce'],
+     "n_tx":len(obj['transactions']),
+     "tx":obj['transactions']
+   }
+
+#get_block = get_fakeblock
+
+if __name__ == "__main__":
+    #get_fakeblock(test_generation_address)
+   print get_block(test_generation_address)

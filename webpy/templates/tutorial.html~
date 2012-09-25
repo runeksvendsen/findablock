@@ -1,0 +1,168 @@
+$def with (form, text)
+
+<html>
+
+    <head>
+        <title>findablock.com</title>
+        <meta http-equiv="Content-Type" content="text/html; charset=ISO-8859-1" />
+        <link rel="stylesheet" type="text/css" href="/static/tutorial.css" />
+        
+        <script type="text/javascript" src="/static/jquery.js"></script>
+        <script src="http://crypto-js.googlecode.com/svn/tags/3.0.2/build/rollups/sha256.js"></script>
+        <script type="text/javascript" src="/static/BigInt.js"></script>
+        <script type="text/javascript" src="/static/memorypool.js"></script>
+        
+        <script type="text/javascript">
+                                window.hash_clock = 0;
+                                window.rate_clock = 0;
+                                window.block_data = [];
+                                window.nonce = 0;
+                                window.bigIntSmHash = 
+                                    str2bigInt("ffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff","16",0);
+                                window.lasttime = 0;
+                                window.lastnonce = 0;
+                                jQuery(document).ready(function() {
+                                    $$("#block_hash").val("");
+
+                                    jQuery("#doit").click(function() {
+                                        start_hashing();
+                                    });
+
+                                    jQuery("#testbtn").click(function () {
+                                        alert("boo");
+                                    });
+
+                                    jQuery("#getblockdata").click(function () {
+                                        //$$("#block_data").html("Loading block data...");
+                                        get_block_data();
+                                       
+                                    });
+                                });
+
+                                function set_block_data() {
+                                    //$$("#block_data").html(JSON.stringify(block_data, null, 4));
+
+                                    jQuery("#version").val(block_data["ver"]);
+                                    jQuery("#prev_hash").val(block_data["prev_block"]);
+                                    jQuery("#merkle_root").val(block_data["mrkl_root"]);
+                                    $$("#human_time").html(String(new Date(block_data["time"]*1000)));
+                                    jQuery("#timestamp").val(switch_endian(block_data["time"].toString(16)));
+                                    jQuery("#target").val(block_data["bits"]);
+                                    jQuery("#nonce").val(0);
+                                }
+
+                                function get_block_data() {
+                                    jQuery.ajax({
+                                            url: '/request',
+                                            type: "POST",
+                                            data: {request : "getblock", address : $$("#recv_addr").val()},
+                                            success: function(data) {
+                                                block_data = data;
+                                                set_block_data()
+                                            },
+                                            });
+                                    return false;
+                                }
+
+                                function switch_endian(hex)
+                                {
+                                    if (hex.length % 2 != 0) {
+                                       return -1
+                                    }
+
+                                    var result = ""
+                                    var start = (hex.length-2)
+                                    while (start >= 0) {
+                                      result += hex.substring(start, start+2)
+                                      start -= 2
+                                    }
+                                    return result;
+                                }
+
+
+                                function settext()
+                                {
+                                    var version = document.getElementById("version");
+                                    var prev_hash = document.getElementById("prev_hash");
+                                    var merkle_root = document.getElementById("merkle_root");
+                                    var timestamp = document.getElementById("timestamp");
+                                    var target = document.getElementById("target");
+                                    var nonce = document.getElementById("nonce");
+
+                                    var hash_field = document.getElementById("block_hash");
+
+                                    var words = CryptoJS.enc.Hex.parse(version.value + prev_hash.value + merkle_root.value + timestamp.value + target.value + nonce.value);
+                                    var hex   = CryptoJS.enc.Hex.stringify(words);
+
+                                    var hash1 = CryptoJS.SHA256(words);
+                                    var hash = CryptoJS.SHA256(hash1);
+
+                                    var littleEndian = switch_endian(hash.toString(CryptoJS.enc.Hex));
+
+                                    hash_field.value = littleEndian;
+
+                                    var bigIntHash = str2bigInt(littleEndian,"16",0);
+                                    //var decHash = bigInt2str(bigIntHash, 10);
+
+                                    //var bigIntTarget = str2bigInt(compact_to_full(target.value),"16",0);
+                                    //var decTarget = bigInt2str(bigIntTarget, 10);
+
+                                    if ( !equals(bigIntHash, bigIntSmHash) && !greater(bigIntHash, bigIntSmHash) ) {
+                                       bigIntSmHash = bigIntHash;
+                                       jQuery("#sm_hash").val(littleEndian);
+                                    }
+                                }
+
+                                function test()
+                                {
+                                    window.nonce++;
+                                    jQuery("#nonce").val(window.nonce);
+                                    settext();
+                                }
+
+                                function start_hashing() {
+                                    settext();
+                                    jQuery("#sm_hash").val(jQuery("#hash_field").val());
+                                    window.lasttime = new Date().getTime();
+                                    window.lastnonce = window.nonce;
+                                    rate_clock = setInterval(rate_measure, 1000);
+                                    hash_clock = setInterval(test,1);
+                                }
+
+                                function rate_measure() {
+                                    thistime = new Date().getTime();
+                                    speed = Math.round((window.nonce-window.lastnonce)/(thistime-window.lasttime)*1000);
+                                    window.lasttime = thistime;
+                                    window.lastnonce = window.nonce
+                                    jQuery("#hash_rate").html(speed + " hashes/sec");
+
+                                }
+        
+                        </script>
+    </head>
+    
+    <body>
+
+        <div align="right"><button class="button" id="testbtn">The infamous test button</button></div>
+
+<br>
+        <div align="center">
+        <button class="button" id="getblockdata">Get block data</button><br><br>
+        <button class="button" id="doit">Start hashing!</button>
+        <button class="button" onclick="hash_clock=window.clearInterval(hash_clock);rate_clock=window.clearInterval(rate_clock)">Stop hashing!</button><br>
+        <font size="12">Block header</font>
+        </div>
+         Block hash: <input id="block_hash" type="text" size="64" value=""><br>
+         Version: <input id="version" type="text" size="8" value="01000000"><br>
+         Previous block hash: <input id="prev_hash" type="text" size="64" value="81cd02ab7e569e8bcd9317e2fe99f2de44d49ab2b8851ba4a308000000000000"><br>
+         Transaction list Merkle root: <input id="merkle_root" type="text" size="64" value="e320b6c2fffc8d750423db8b1eb942ae710e951ed797f7affc8892b0f1fc122b"><br>
+         Timestamp: <input id="timestamp" type="text" size="8" value="c7f5d74d"> <span id="human_time">Now?</span><br>
+         Current target in compact format: <input id="target" type="text" size="8" value="f2b9441a"><br>
+         Nonce: <input id="nonce" type="text" size="8" value="42a14695"><br><br>
+         Hashing speed: <span id="hash_rate">0 hashes/sec</span><br>
+         Receive address: <input id="recv_addr" type="text" size="34" value="1L4fyJqCy5uLmoMo4cG74TaTvgtUwwSHJx"><br>
+         Smallest hash found: <input id="sm_hash" type="text" size="64" value=""><br><br><br>
+        <span id="block_data"></span>
+    </body>
+    
+</html>
