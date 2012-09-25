@@ -1,5 +1,8 @@
-import sys
+import sys, os
 
+os.getcwd()
+
+sys.path.insert(0, '/home/rune/findablock/bitcointools')
 sys.path.insert(0, '/home/rune/Programming/bitcointools')
 
 #from deserialize import *
