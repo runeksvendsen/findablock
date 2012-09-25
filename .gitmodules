@@ -1,0 +1,3 @@
+[submodule "bitcointools"]
+	path = bitcointools
+	url = git@github.com:runeksvendsen/bitcointools.git
