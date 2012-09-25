@@ -7,6 +7,7 @@ window.bigIntSmHash = str2bigInt("ffffffffffffffffffffffffffffffffffffffffffffff
 window.bigIntTarget = "";
 window.lasttime = 0;
 window.lastnonce = 0;
+window.difficulty = 0;
 
 jQuery(document).ready(function() {
     $("#block_hash").val("");
@@ -24,11 +25,12 @@ jQuery(document).ready(function() {
         //$("#block_data").html("Loading block data...");
         get_block_data();
     });
+   
 });
 
 function set_block_data() {
     //$("#block_data").html(JSON.stringify(block_data, null, 4));
-
+	maximum_target = "00000000FFFF0000000000000000000000000000000000000000000000000000";
     $("#version").val(block_data["ver"]);
     $("#prev_hash").val(block_data["prev_block"]);
     $("#merkle_root").val(block_data["mrkl_root"]);
@@ -37,6 +39,13 @@ function set_block_data() {
     $("#target").val(switch_endian(block_data["bits"]));
     $("#nonce").val(0);
     $("#target_hash").val(zero_pad(compact_to_full(switch_endian(block_data["bits"])), 64));
+    
+    window.bigIntTarget = str2bigInt(compact_to_full($("#target").val()),"16",0);
+	var biMaxTarget = str2bigInt(maximum_target, "16", 0);
+	var result = new Array(20);
+	var r = new Array(20);
+	divide_(biMaxTarget,window.bigIntTarget,result,r);
+	window.difficulty = parseInt(bigInt2str(result,10));
 }
 
 function get_block_data() {
@@ -104,8 +113,6 @@ function load_values() {
         $("#target").val() + u32_lehex($("#nonce").val()));
         
 	window.nonce = $("#nonce").val();
-	window.bigIntTarget = str2bigInt(compact_to_full($("#target").val()),"16",0);
-
     window.block_header = CryptoJS.enc.Hex.stringify(header_data);
 }
 
@@ -161,6 +168,34 @@ function rate_measure() {
     thistime = new Date().getTime();
     speed = Math.round((window.nonce-window.lastnonce)/(thistime-window.lasttime)*1000);
     window.lasttime = thistime;
-    window.lastnonce = window.nonce
-    jQuery("#hash_rate").html(speed + " hashes/sec");
+    window.lastnonce = window.nonce;
+    $("#hash_rate").html(speed + " hashes/sec");
+    
+    //let's calculate how long it will take, on average, to find a block at current speed
+    time = secondsToString(window.difficulty * 4294967296 / speed);
+    $("#time_left").html(time);
+}
+
+function secondsToString(seconds) {
+	var numyears = Math.floor(seconds / 31536000);
+	var numdays = Math.floor((seconds % 31536000) / 86400); 
+	var numhours = Math.floor(((seconds % 31536000) % 86400) / 3600);
+	var numminutes = Math.floor((((seconds % 31536000) % 86400) % 3600) / 60);
+	var numseconds = Math.floor((((seconds % 31536000) % 86400) % 3600) % 60);
+	return numyears + " years " +  numdays + " days " + numhours + " hours " + numminutes + " minutes " + numseconds + " seconds";
+}
+
+function clearText() {
+	$("#version").val("");
+	$("#prev_hash").val("");
+	$("#merkle_root").val("");
+	$("#timestamp").val("");
+	$("#human_time").html("");
+	$("#target").val("");
+	$("#nonce").val("");
+	$("#block_hash").val("");
+	$("#hash_rate").html("");
+	$("#time_left").html("");
+	$("#sm_hash").val("");
+	$("#target_hash").val("");
 }

@@ -12,7 +12,8 @@
     <body>
         <div align="right"><button class="button" id="testbtn">The infamous test button</button></div><br>
         <div align="center">
-	        <button class="button" id="getblockdata">Get block data</button><br><br>
+	        <button class="button" id="getblockdata">Get block data</button>
+	        <button class="button" onclick="clearText();">Clear</button><br><br>
 	        <button class="button" id="doit">Start hashing!</button>
 	        <button class="button" onclick="hash_clock=window.clearInterval(hash_clock);rate_clock=window.clearInterval(rate_clock)">Stop hashing!</button><br>
 	        <br>
@@ -22,18 +23,19 @@
 			<tr><td align="center" colspan="2"><span class="header">Block header</span></td></tr>
 	    	<tr><td>
 			    <table class="subtable">
-			        <tr><td>Version:</td><td> <input class="monospace" id="version" type="text" size="8" value="01000000"></td></tr>
-			        <tr><td>Previous block hash:</td><td> <input class="monospace" id="prev_hash" type="text" size="64" value="81cd02ab7e569e8bcd9317e2fe99f2de44d49ab2b8851ba4a308000000000000"></td></tr>
-			        <tr><td>Transaction list Merkle root:</td><td> <input class="monospace" id="merkle_root" type="text" size="64" value="e320b6c2fffc8d750423db8b1eb942ae710e951ed797f7affc8892b0f1fc122b"></td></tr>
-			        <tr><td>Timestamp:</td><td> <input class="monospace" id="timestamp" type="text" size="8" value="c7f5d74d"> <span id="human_time">Now?</span></td></tr>
-			        <tr><td>Current target in compact format:</td><td> <input class="monospace" id="target" type="text" size="8" value="f2b9441a"></td></tr>
-			        <tr><td>Nonce:</td><td> <input class="monospace" id="nonce" type="text" size="8" value="42a14695"></td></tr>
+			        <tr><td>Version:</td><td> <input class="monospace" id="version" type="text" size="8" value=""></td></tr>
+			        <tr><td>Previous block hash:</td><td> <input class="monospace" id="prev_hash" type="text" size="64" value=""></td></tr>
+			        <tr><td>Transaction list Merkle root:</td><td> <input class="monospace" id="merkle_root" type="text" size="64" value=""></td></tr>
+			        <tr><td>Timestamp:</td><td> <input class="monospace" id="timestamp" type="text" size="8" value="c7f5d74d"> <span id="human_time"></span></td></tr>
+			        <tr><td>Current target in compact format:</td><td> <input class="monospace" id="target" type="text" size="8" value=""></td></tr>
+			        <tr><td>Nonce:</td><td> <input class="monospace" id="nonce" type="text" size="8" value=""></td></tr>
 			    </table>
 			</td></tr>
 			<tr><td>
 			    <table>
 			        <tr><td>Block hash:</td><td> <input class="monospace" id="block_hash" type="text" size="64" value=""></td></tr>
-			        <tr><td>Hashing speed:</td><td> <span id="hash_rate">0 hashes/sec</span></td></tr>
+			        <tr><td>Hashing speed:</td> <td><span id="hash_rate">0 hashes/sec</span></td></tr>
+			        <tr><td>Average time to find a block:</td> <td><span id="time_left"></span></td></tr>
 			        <tr><td>Smallest hash found:</td><td> <input class="monospace" id="sm_hash" type="text" size="64" value=""></td></tr>
 			        <tr><td>Target hash:</td><td> <input class="monospace" id="target_hash" type="text" size="64" value="" readonly="readonly"></td></tr>
 			        <tr><td>Receive address:</td><td> <input id="recv_addr" type="text" size="34" value="1L4fyJqCy5uLmoMo4cG74TaTvgtUwwSHJx"></td></tr>
